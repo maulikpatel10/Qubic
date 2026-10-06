@@ -546,6 +546,16 @@ body.qd-open .wa{display:none}
 .facts dt{font-size:clamp(28px,2.5vw,38px);letter-spacing:-.03em}
 .facts dt.fl svg{width:clamp(44px,4vw,56px)}
 @media(max-width:520px){.facts>div{grid-template-columns:minmax(0,108px) 1fr}.facts dt{font-size:26px}}
+
+/* product codes */
+.card .ct{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.card .ct .pc,.pcode b{letter-spacing:.01em}
+.card .ct .pc{font-size:12px;font-weight:700;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:3px 8px;white-space:nowrap}
+.pi-tags{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.pcode{font-size:13px;color:var(--ink2);display:inline-flex;align-items:center;gap:6px}
+.pcode b{font-size:13px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:3px 8px}
+
+.rcode{font-size:12.5px;font-weight:700;letter-spacing:.01em;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:3px 9px;white-space:nowrap}
 /* motion prefs */
 .rv .w>span{transition-duration:.9s}
 .fade{opacity:0;transform:translateY(20px);transition:opacity .9s,transform .9s var(--ease)}
@@ -827,13 +837,14 @@ const PRODUCTS=RAW.map(([cat,size],i)=>{
   const c=CATS[cat];
   const verified=(cat==='flange'&&size===80);
   const images=(cat==='brass'&&size===15)?['br15a','br15b','br15c']:(cat==='brass'&&size===20)?['br20a','br20b']:(cat==='brass'&&size===25)?['br25a','br25b','br25c']:(cat==='brass'&&size===32)?['br32a','br32b','br32c']:(cat==='brass'&&size===40)?['br40a','br40b','br40c']:(cat==='ci'&&size===25)?['ci25p','ci25q','ci25a']:(cat==='ci'&&size===40)?['ci40p','ci40a','ci40b']:(cat==='flange'&&size===100)?['fl100a','fl100b','fl100c']:(cat==='flange'&&size===80)?['fl80a','fl80b','fl80c']:(cat==='flange'&&size===50)?['fl50b','fl50a','fl50c']:cat==='flange'?(verified?['fl80f','fl80s']:['fl80s','fl80f']):(i%2?['closed','open']:['open','closed']);
-  const specs=[['Nominal size',(cat==='flange'?'DN'+size+' ('+size+' mm)':size+' mm')],['Construction',c.con]];
+  const specs=[['Product code',(cat==='brass'?'QCMB-':cat==='ci'?'QCMC-':'DM-')+size],['Nominal size',(cat==='flange'?'DN'+size+' ('+size+' mm)':size+' mm')],['Construction',c.con]];
   const data={};
   const hot=cat!=='flange';
   if(hot)specs.push(['Hot water version','Available, up to 80 °C']);
   if(verified){data.q3='63 m³/h';data.map='MAP 16 bar';data.temp='T50';data.acc='Class 2';
     specs.push(['Permanent flow Q3','63 m³/h'],['Max. admissible pressure','MAP 16 bar'],['Temperature class','T50'],['Accuracy class','2']);}
-  return{id:i+1,cat,size,slug:`${size}mm-${c.slug}-water-meter`,name:`QUBIC ${size} MM ${c.nm} WATER METER`,
+  const code=(cat==='brass'?'QCMB-':cat==='ci'?'QCMC-':'DM-')+size; // product code
+  return{id:i+1,cat,size,code,slug:`${size}mm-${c.slug}-water-meter`,name:`QUBIC ${size} MM ${c.nm} WATER METER`,
     images,verified,specs,data,hot,
     blurb:verified?'DN80 flanged meter. Q3, T50, MAP 16 and accuracy class 2 are marked on the body.':`${size} mm ${c.desc}.`,
     documents:{datasheet:null,drawing:null}};
@@ -875,7 +886,7 @@ function productCard(p){
   const c=CATS[p.cat];
   return `<article class="card" data-id="${p.id}">
    <div class="im"><span class="sz">${p.size}<small>mm</small></span><img src="${IMG[p.images[0]]}" alt="QUBIC ${p.size} mm ${c.desc.toLowerCase()}" loading="lazy" width="600" height="600"></div>
-   <div class="bd"><div class="ct">${c.label}</div>
+   <div class="bd"><div class="ct"><span>${c.label}</span><span class="pc">${p.code}</span></div>
     <h3><a href="#/products/${p.slug}">${p.name}</a></h3>
     <p>${p.cat==='flange'?'Heavy-duty flanged water metering for larger-diameter installations.':p.size+' mm '+c.desc+'.'}</p>
     <div class="ft"><button class="btn sm gh qb" data-quote data-product="${p.id}" aria-label="Request a quote for ${p.name}">Request a quote</button></div>
@@ -995,7 +1006,7 @@ function initDial(){
   const w=$('#dialw');if(!w)return;
   const drums=$$('.ddr',w),ptrs=$$('.dpt',w),stw=$('#dstw',w);
   // real gearing: x0.0001 dial = 1 turn per 0.001 m³, each next dial 10× slower; drums roll as the x0.1 dial passes 9 → 0
-  let vol=9.97,sa=0,t=-.6;const RATE=.02;
+  let vol=9.97,sa=0,t=-.6;const RATE=.005;
   const paint=()=>{
     const lo=vol%1,roll=lo>.99?(lo-.99)/.01:0;
     drums.forEach(d=>{const jx=+d.dataset.j,q=Math.floor(vol)/Math.pow(10,jx);let p=Math.floor(q)%10;const carry=jx===0||Math.floor(vol)%Math.pow(10,jx)===Math.pow(10,jx)-1;if(carry)p+=roll;d.setAttribute('transform',`translate(0 ${(-p*41).toFixed(2)})`)});
@@ -1003,7 +1014,7 @@ function initDial(){
     stw.setAttribute('transform',`rotate(${(sa%360).toFixed(1)})`);
   };
   paint();
-  if(!RM)visibleLoop(w,dt=>{t+=dt;const r=Math.max(0,Math.min(1,t/2.6)),f=r*r*(3-2*r);vol+=dt*RATE*f;sa+=dt*1400*f;paint()});
+  if(!RM)visibleLoop(w,dt=>{t+=dt;const r=Math.max(0,Math.min(1,t/2.6)),f=r*r*(3-2*r);vol+=dt*RATE*f;sa+=dt*600*f;paint()});
 }
 function heroView(){
   const wl='<i class="wl b"></i><i class="wl h"></i><i class="wl h2"></i>';
@@ -1141,7 +1152,7 @@ function productView(p){
     <div class="gal"><div class="gmain" id="gmain" role="button" tabindex="0" aria-label="Zoom product image"><img id="gimg" src="${IMG[p.images[0]]}" alt="${p.name}" width="800" height="800"><span class="hint">Click to zoom</span></div>
      <div class="thumbs">${p.images.map((k,i)=>`<button data-img="${k}" aria-label="View image ${i+1}" ${i===0?'aria-current="true"':''}><img src="${IMG[k]}" alt="" width="80" height="80"></button>`).join('')}</div></div>
     <div class="pi">
-     <span class="tag t">${c.label}</span>
+     <div class="pi-tags"><span class="tag t">${c.label}</span></div>
      <h1>${p.name}</h1>
      <p class="lead">${p.blurb}</p>
      <div class="row"><button class="btn pri" data-quote data-product="${p.id}">Request a quote ${ARW}</button></div>
@@ -1263,7 +1274,7 @@ function initRange(){
     $$('[data-r]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.r==id));
     const c=CATS[p.cat];
     stage.innerHTML=`<div class="rimg"><span class="ring"></span><img src="${IMG['ln_'+p.images[0]]||IMG[p.images[0]]}" alt="${p.name}, line drawing" width="700" height="600"></div>
-     <div class="rinfo"><div class="big">${p.size}<small>mm</small></div><span class="tag t" style="margin-top:14px">${c.label}</span><h3>${p.name}</h3><p>${p.cat==='flange'?'Heavy-duty flanged water metering for larger-diameter installations.':p.size+' mm '+c.desc+'.'}</p>
+     <div class="rinfo"><div class="big">${p.size}<small>mm</small></div><div class="pi-tags" style="margin-top:14px"><span class="tag t">${c.label}</span><span class="rcode" aria-label="Product code ${p.code}">${p.code}</span></div><h3>${p.name}</h3><p>${p.cat==='flange'?'Heavy-duty flanged water metering for larger-diameter installations.':p.size+' mm '+c.desc+'.'}</p>
       <div class="row"><a class="btn dk" href="#/products/${p.slug}">View product ${ARW}</a><button class="btn gh" data-quote data-product="${p.id}">Request a quote</button></div><a class="rlink" href="#/products">View complete range <span aria-hidden="true">→</span></a></div>`;
     if(anim&&!RM){$('.rimg img',stage).animate([{opacity:0,transform:'translateX(40px) scale(.96)'},{opacity:1,transform:'none'}],{duration:650,easing:'cubic-bezier(.2,.7,.1,1)'});
       $('.big',stage).animate([{transform:'translateY(40%)',opacity:0},{transform:'none',opacity:1}],{duration:550,easing:'cubic-bezier(.2,.7,.1,1)'});
@@ -1432,7 +1443,7 @@ async function handleSubmit(form){
   if(data.quantity)data.quantity=String(+data.quantity);
   if(data.phone){const{intl,d}=phoneParts(data.phone,data.phone_code);data.phone=intl?'+'+d:((data.phone_code||'')+' '+d).trim()}
   delete data.phone_code;
-  if(form.dataset.mode==='quote'){const ck=catKeyOf(data.category),pr=ck&&data.size?PRODUCTS.find(p=>p.cat===ck&&p.size+' mm'===data.size):null;data.product=pr?pr.name:(ck?CATS[ck].label:(data.size||''))}
+  if(form.dataset.mode==='quote'){const ck=catKeyOf(data.category),pr=ck&&data.size?PRODUCTS.find(p=>p.cat===ck&&p.size+' mm'===data.size):null;data.product=pr?`${pr.name} (${pr.code})`:(ck?CATS[ck].label:(data.size||''))}
   const rfq=buildRFQ(data),to=CONFIG.rfqTo||CONFIG.email;data.ref=rfq.ref;
   const btn=$('button[type=submit]',form);btn.disabled=true;
   let sent=false,failed=false;
